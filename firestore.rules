@@ -1,0 +1,61 @@
+rules_version = '2';
+
+// İşini Gör güvenlik kuralları.
+//
+// Temel kural: giriş yapan herkes YALNIZCA kendi işlerini ve kendi
+// bildirimlerini okuyabilir/yazabilir. Fiyatlandırma ve durum ilerletme
+// (inProgress/completed) admin tarafına ait; admin paneli Admin SDK ile
+// yazacağı için bu kurallardan muaf olacak.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function owns(resourceData) {
+      return signedIn() && request.auth.uid == resourceData.userId;
+    }
+
+    match /jobs/{jobId} {
+      // Sadece kendi işini görebilir.
+      allow read: if owns(resource.data);
+
+      // Yeni iş her zaman pending ve fiyatsız başlar; kullanıcı kendi
+      // adına oluşturur.
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.price == null;
+
+      // Kullanıcı yalnızca teklifi kabul/reddedebilir ya da bekleyen
+      // talebini iptal edebilir. Fiyata ve sahibine dokunamaz.
+      allow update: if owns(resource.data)
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.price == resource.data.price
+        && (
+          (resource.data.status == 'priced'
+            && request.resource.data.status in ['accepted', 'rejected'])
+          || (resource.data.status == 'pending'
+            && request.resource.data.status == 'cancelled')
+        );
+
+      // İş kaydı silinmez; iptal edilir.
+      allow delete: if false;
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if owns(resource.data);
+
+      // Bildirimi uygulama değil, admin/sunucu tarafı oluşturur.
+      allow create: if false;
+
+      // Kullanıcı sadece "okundu" işaretleyebilir.
+      allow update: if owns(resource.data)
+        && request.resource.data.diff(resource.data)
+             .affectedKeys().hasOnly(['read']);
+
+      allow delete: if false;
+    }
+  }
+}

@@ -97,7 +97,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 child: InkWell(
                   borderRadius: BorderRadius.circular(18),
                   onTap: () {
-                    n.read = true;
                     _repo.markNotificationsRead(userId);
                     if (job != null) {
                       Navigator.of(context).push(

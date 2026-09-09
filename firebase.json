@@ -1,0 +1,24 @@
+{
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "isini-gor-app-7acf6",
+          "appId": "1:728742801164:android:ccd6b973e3f4602f72a329",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "isini-gor-app-7acf6",
+          "configurations": {
+            "android": "1:728742801164:android:ccd6b973e3f4602f72a329"
+          }
+        }
+      }
+    }
+  }
+}

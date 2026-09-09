@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "728742801164",
+    "project_id": "isini-gor-app-7acf6",
+    "storage_bucket": "isini-gor-app-7acf6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:728742801164:android:ccd6b973e3f4602f72a329",
+        "android_client_info": {
+          "package_name": "com.example.isini_gor"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "728742801164-4vtu419sehig10icshipcl07kohh102p.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.isini_gor",
+            "certificate_hash": "91d0e43fe88cde0f235790337c966183adb10b0f"
+          }
+        },
+        {
+          "client_id": "728742801164-28c9etfta4bl4olb2ks09egne0g51a6m.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCx34Tbg0jx_6kGhZGbj95PLoCNVm5q9UQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "728742801164-28c9etfta4bl4olb2ks09egne0g51a6m.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../core/theme.dart';
 import '../services/auth_service.dart';
@@ -19,6 +20,13 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await _auth.signInWithGoogle();
       // Yönlendirmeyi main.dart'taki oturum dinleyicisi yapıyor.
+    } on GoogleSignInException catch (e) {
+      // Kullanıcı hesap seçiciyi kapattıysa hata göstermeye gerek yok.
+      if (e.code == GoogleSignInExceptionCode.canceled) return;
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Google girişi başarısız: ${e.description}')),
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(

@@ -1,12 +1,13 @@
 import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
 import '../models/job.dart';
 
-/// Kullanıcıya düşen bildirim (şimdilik uygulama içi).
+/// Kullanıcıya düşen bildirim.
 class AppNotification {
-  AppNotification({
+  const AppNotification({
     required this.id,
     required this.jobId,
     required this.title,
@@ -20,52 +21,113 @@ class AppNotification {
   final String title;
   final String body;
   final DateTime at;
-  bool read;
+  final bool read;
+
+  factory AppNotification.fromMap(String id, Map<String, dynamic> map) =>
+      AppNotification(
+        id: id,
+        jobId: map['jobId'] as String? ?? '',
+        title: map['title'] as String? ?? '',
+        body: map['body'] as String? ?? '',
+        at: DateTime.tryParse(map['at'] as String? ?? '') ?? DateTime.now(),
+        read: map['read'] as bool? ?? false,
+      );
 }
 
-/// İş verisinin tek kaynağı.
+/// Firestore üzerindeki iş ve bildirim verisi.
 ///
-/// Şimdilik bellekte tutuluyor. Firebase bağlanınca bu sınıfın gövdesi
-/// Firestore `jobs` koleksiyonuna gidecek ([Job.toMap] / [Job.fromMap] hazır),
-/// ekranlar değişmeyecek.
+/// `jobs` ve `notifications` koleksiyonları canlı dinlenir; admin panelinden
+/// fiyat girildiği anda uygulama kendiliğinden güncellenir.
 class JobRepository extends ChangeNotifier {
-  JobRepository._() {
-    _seed();
-  }
+  JobRepository._();
 
   static final JobRepository instance = JobRepository._();
 
-  final List<Job> _jobs = [];
-  final List<AppNotification> _notifications = [];
-  final Map<String, Timer> _pricingTimers = {};
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  int _seq = 0;
+  CollectionReference<Map<String, dynamic>> get _jobsRef =>
+      _db.collection('jobs');
+  CollectionReference<Map<String, dynamic>> get _notificationsRef =>
+      _db.collection('notifications');
 
-  /// Admin paneli henüz olmadığı için, yeni talepler bu süre sonunda
-  /// otomatik fiyatlanıp kullanıcıya bildirim düşüyor (demo amaçlı).
-  /// Firebase + admin paneli gelince kapatılacak. Testler kapatabilsin diye
-  /// `const` değil.
-  static bool demoAutoPricing = true;
-  static const Duration demoPricingDelay = Duration(seconds: 8);
-  static const double _demoPrice = 1450;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _jobsSub;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _notificationsSub;
+
+  List<Job> _jobs = [];
+  List<AppNotification> _notifications = [];
+
+  bool _loading = true;
+  bool get loading => _loading;
+
+  String? _userId;
+
+  /// Oturum açan kullanıcı için canlı dinlemeyi başlatır.
+  /// Kullanıcı değiştiğinde (veya çıkış yaptığında) yeniden çağrılır.
+  void watchUser(String? userId) {
+    if (_userId == userId) return;
+    _userId = userId;
+
+    _jobsSub?.cancel();
+    _notificationsSub?.cancel();
+    _jobs = [];
+    _notifications = [];
+
+    if (userId == null) {
+      _loading = false;
+      notifyListeners();
+      return;
+    }
+
+    _loading = true;
+    notifyListeners();
+
+    _jobsSub = _jobsRef
+        .where('userId', isEqualTo: userId)
+        .snapshots()
+        .listen(
+          (snapshot) {
+            _jobs =
+                snapshot.docs.map((d) => Job.fromMap(d.id, d.data())).toList()
+                  ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+            _loading = false;
+            notifyListeners();
+          },
+          onError: (Object e) {
+            debugPrint('jobs dinlenemedi: $e');
+            _loading = false;
+            notifyListeners();
+          },
+        );
+
+    _notificationsSub = _notificationsRef
+        .where('userId', isEqualTo: userId)
+        .snapshots()
+        .listen(
+          (snapshot) {
+            _notifications =
+                snapshot.docs
+                    .map((d) => AppNotification.fromMap(d.id, d.data()))
+                    .toList()
+                  ..sort((a, b) => b.at.compareTo(a.at));
+            notifyListeners();
+          },
+          onError: (Object e) => debugPrint('bildirimler dinlenemedi: $e'),
+        );
+  }
 
   // ---------------------------------------------------------------- okuma
 
-  List<Job> jobsFor(String userId) {
-    final list = _jobs.where((j) => j.userId == userId).toList()
-      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-    return list;
-  }
+  List<Job> jobsFor(String userId) => _jobs;
 
   List<Job> openJobsFor(String userId) =>
-      jobsFor(userId).where((j) => j.status.isOpen).toList();
+      _jobs.where((j) => j.status.isOpen).toList();
 
   List<Job> pastJobsFor(String userId) =>
-      jobsFor(userId).where((j) => !j.status.isOpen).toList();
+      _jobs.where((j) => !j.status.isOpen).toList();
 
-  /// Onay bekleyen (fiyat gelmiş) işler — ana sayfada öne çıkarılıyor.
+  /// Onay bekleyen (fiyat gelmiş) işler — ana ekranda öne çıkarılıyor.
   List<Job> awaitingActionFor(String userId) =>
-      jobsFor(userId).where((j) => j.status.needsUserAction).toList();
+      _jobs.where((j) => j.status.needsUserAction).toList();
 
   Job? byId(String id) {
     for (final job in _jobs) {
@@ -74,24 +136,20 @@ class JobRepository extends ChangeNotifier {
     return null;
   }
 
-  List<AppNotification> notificationsFor(String userId) {
-    final jobIds = _jobs
-        .where((j) => j.userId == userId)
-        .map((j) => j.id)
-        .toSet();
-    final list = _notifications.where((n) => jobIds.contains(n.jobId)).toList()
-      ..sort((a, b) => b.at.compareTo(a.at));
-    return list;
-  }
+  List<AppNotification> notificationsFor(String userId) => _notifications;
 
   int unreadCountFor(String userId) =>
-      notificationsFor(userId).where((n) => !n.read).length;
+      _notifications.where((n) => !n.read).length;
 
-  void markNotificationsRead(String userId) {
-    for (final n in notificationsFor(userId)) {
-      n.read = true;
+  Future<void> markNotificationsRead(String userId) async {
+    final unread = _notifications.where((n) => !n.read).toList();
+    if (unread.isEmpty) return;
+
+    final batch = _db.batch();
+    for (final n in unread) {
+      batch.update(_notificationsRef.doc(n.id), {'read': true});
     }
-    notifyListeners();
+    await batch.commit();
   }
 
   // ---------------------------------------------------------------- yazma
@@ -104,12 +162,9 @@ class JobRepository extends ChangeNotifier {
     required DateTime preferredDate,
     String? phone,
   }) async {
-    // TODO(firebase): FirebaseFirestore.instance.collection('jobs').add(job.toMap())
-    await Future<void>.delayed(const Duration(milliseconds: 500));
-
     final now = DateTime.now();
     final job = Job(
-      id: 'job-${++_seq}-${now.millisecondsSinceEpoch}',
+      id: '',
       userId: userId,
       title: title,
       description: description,
@@ -128,13 +183,9 @@ class JobRepository extends ChangeNotifier {
       ],
     );
 
-    _jobs.add(job);
-    notifyListeners();
-
-    if (demoAutoPricing) {
-      _scheduleDemoPricing(job.id);
-    }
-    return job;
+    final data = job.toMap();
+    final ref = await _jobsRef.add(data);
+    return Job.fromMap(ref.id, data);
   }
 
   /// Admin panelinden fiyat girildiğinde çalışacak akış.
@@ -142,244 +193,67 @@ class JobRepository extends ChangeNotifier {
     final job = byId(jobId);
     if (job == null || job.status != JobStatus.pending) return;
 
-    _update(
-      job.copyWith(
-        status: JobStatus.priced,
-        price: price,
-        adminNote: note,
-        timeline: [
-          ...job.timeline,
-          JobEvent(
-            status: JobStatus.priced,
-            at: DateTime.now(),
-            note: note ?? 'İşin tanımlandı ve fiyatlandırıldı.',
-          ),
-        ],
-      ),
+    await _applyStatus(
+      job,
+      JobStatus.priced,
+      note: note ?? 'İşin tanımlandı ve fiyatlandırıldı.',
+      extra: {'price': price, 'adminNote': note},
     );
 
-    // TODO(firebase): FCM push. Şimdilik uygulama içi bildirim.
-    _pushNotification(
-      jobId: jobId,
-      title: 'İşiniz tanımlandı',
-      body: '${job.title} için fiyat teklifi hazır. Onaylamak için dokun.',
-    );
+    await _notificationsRef.add({
+      'userId': job.userId,
+      'jobId': jobId,
+      'title': 'İşiniz tanımlandı',
+      'body': '${job.title} için fiyat teklifi hazır. Onaylamak için dokun.',
+      'at': DateTime.now().toIso8601String(),
+      'read': false,
+    });
   }
 
   Future<void> acceptOffer(String jobId) async {
     final job = byId(jobId);
     if (job == null || !job.status.needsUserAction) return;
-
-    _update(
-      job.copyWith(
-        status: JobStatus.accepted,
-        timeline: [
-          ...job.timeline,
-          JobEvent(
-            status: JobStatus.accepted,
-            at: DateTime.now(),
-            note: 'Teklifi onayladın.',
-          ),
-        ],
-      ),
-    );
+    await _applyStatus(job, JobStatus.accepted, note: 'Teklifi onayladın.');
   }
 
   Future<void> rejectOffer(String jobId) async {
     final job = byId(jobId);
     if (job == null || !job.status.needsUserAction) return;
-
-    _update(
-      job.copyWith(
-        status: JobStatus.rejected,
-        timeline: [
-          ...job.timeline,
-          JobEvent(
-            status: JobStatus.rejected,
-            at: DateTime.now(),
-            note: 'Teklifi reddettin.',
-          ),
-        ],
-      ),
-    );
+    await _applyStatus(job, JobStatus.rejected, note: 'Teklifi reddettin.');
   }
 
   Future<void> cancelJob(String jobId) async {
     final job = byId(jobId);
     if (job == null || !job.status.isOpen) return;
-
-    _pricingTimers.remove(jobId)?.cancel();
-    _update(
-      job.copyWith(
-        status: JobStatus.cancelled,
-        timeline: [
-          ...job.timeline,
-          JobEvent(
-            status: JobStatus.cancelled,
-            at: DateTime.now(),
-            note: 'Talebi iptal ettin.',
-          ),
-        ],
-      ),
-    );
+    await _applyStatus(job, JobStatus.cancelled, note: 'Talebi iptal ettin.');
   }
 
   // ------------------------------------------------------------- yardımcı
 
-  void _update(Job job) {
-    final index = _jobs.indexWhere((j) => j.id == job.id);
-    if (index == -1) return;
-    _jobs[index] = job;
-    notifyListeners();
-  }
+  Future<void> _applyStatus(
+    Job job,
+    JobStatus status, {
+    String? note,
+    Map<String, dynamic> extra = const {},
+  }) async {
+    final now = DateTime.now();
+    final timeline = [
+      ...job.timeline,
+      JobEvent(status: status, at: now, note: note),
+    ];
 
-  void _pushNotification({
-    required String jobId,
-    required String title,
-    required String body,
-  }) {
-    _notifications.add(
-      AppNotification(
-        id: 'ntf-${_notifications.length + 1}',
-        jobId: jobId,
-        title: title,
-        body: body,
-        at: DateTime.now(),
-      ),
-    );
-    notifyListeners();
-  }
-
-  void _scheduleDemoPricing(String jobId) {
-    _pricingTimers[jobId] = Timer(demoPricingDelay, () {
-      _pricingTimers.remove(jobId);
-      final job = byId(jobId);
-      if (job == null || job.status != JobStatus.pending) return;
-      setPrice(
-        jobId,
-        _demoPrice,
-        note: 'Ekibimiz talebini inceledi ve fiyatlandırdı.',
-      );
+    await _jobsRef.doc(job.id).update({
+      'status': status.name,
+      'updatedAt': now.toIso8601String(),
+      'timeline': timeline.map((e) => e.toMap()).toList(),
+      ...extra,
     });
   }
 
   @override
   void dispose() {
-    for (final timer in _pricingTimers.values) {
-      timer.cancel();
-    }
-    _pricingTimers.clear();
+    _jobsSub?.cancel();
+    _notificationsSub?.cancel();
     super.dispose();
-  }
-
-  /// Ekranlar boş görünmesin diye örnek veri.
-  void _seed() {
-    final now = DateTime.now();
-    const userId = 'demo-user-1';
-
-    _jobs.addAll([
-      Job(
-        id: 'job-seed-1',
-        userId: userId,
-        title: 'Kışlık lastik değişimi',
-        description:
-            '4 adet kışlık lastiğim var, takılması ve balans ayarı gerekiyor.',
-        address: 'Bahçelievler Mah. 32. Sk. No:5, Ankara',
-        preferredDate: now.add(const Duration(days: 2)),
-        phone: '0555 000 00 00',
-        status: JobStatus.priced,
-        price: 1450,
-        adminNote: 'Balans ve montaj dahildir. Adresine geliyoruz.',
-        createdAt: now.subtract(const Duration(hours: 5)),
-        updatedAt: now.subtract(const Duration(minutes: 20)),
-        timeline: [
-          JobEvent(
-            status: JobStatus.pending,
-            at: now.subtract(const Duration(hours: 5)),
-            note: 'Talebin bize ulaştı.',
-          ),
-          JobEvent(
-            status: JobStatus.priced,
-            at: now.subtract(const Duration(minutes: 20)),
-            note: 'İşin tanımlandı ve fiyatlandırıldı.',
-          ),
-        ],
-      ),
-      Job(
-        id: 'job-seed-2',
-        userId: userId,
-        title: 'Köpeğimi akşam gezdirme',
-        description:
-            'Golden retriever, 3 yaşında. Hafta içi her akşam 19:00 civarı.',
-        address: 'Çankaya, Ankara',
-        preferredDate: now.add(const Duration(days: 1)),
-        phone: '0555 000 00 00',
-        status: JobStatus.accepted,
-        price: 300,
-        adminNote: 'Günlük 45 dakika yürüyüş.',
-        createdAt: now.subtract(const Duration(days: 1)),
-        updatedAt: now.subtract(const Duration(hours: 3)),
-        timeline: [
-          JobEvent(
-            status: JobStatus.pending,
-            at: now.subtract(const Duration(days: 1)),
-            note: 'Talebin bize ulaştı.',
-          ),
-          JobEvent(
-            status: JobStatus.priced,
-            at: now.subtract(const Duration(hours: 6)),
-            note: 'İşin tanımlandı ve fiyatlandırıldı.',
-          ),
-          JobEvent(
-            status: JobStatus.accepted,
-            at: now.subtract(const Duration(hours: 3)),
-            note: 'Teklifi onayladın.',
-          ),
-        ],
-      ),
-      Job(
-        id: 'job-seed-3',
-        userId: userId,
-        title: 'Periyodik bakım',
-        description: '40.000 km bakımı, yağ ve filtre değişimi.',
-        address: 'Kızılay, Ankara',
-        phone: '0555 000 00 00',
-        preferredDate: now.subtract(const Duration(days: 12)),
-        status: JobStatus.completed,
-        price: 3200,
-        adminNote: 'Bakım tamamlandı, faturası e-postana gönderildi.',
-        createdAt: now.subtract(const Duration(days: 15)),
-        updatedAt: now.subtract(const Duration(days: 12)),
-        timeline: [
-          JobEvent(
-            status: JobStatus.pending,
-            at: now.subtract(const Duration(days: 15)),
-          ),
-          JobEvent(
-            status: JobStatus.priced,
-            at: now.subtract(const Duration(days: 14)),
-          ),
-          JobEvent(
-            status: JobStatus.accepted,
-            at: now.subtract(const Duration(days: 14)),
-          ),
-          JobEvent(
-            status: JobStatus.completed,
-            at: now.subtract(const Duration(days: 12)),
-            note: 'İş tamamlandı.',
-          ),
-        ],
-      ),
-    ]);
-
-    _notifications.add(
-      AppNotification(
-        id: 'ntf-seed-1',
-        jobId: 'job-seed-1',
-        title: 'İşiniz tanımlandı',
-        body: 'Kışlık lastik değişimi için fiyat teklifi hazır.',
-        at: now.subtract(const Duration(minutes: 20)),
-      ),
-    );
   }
 }

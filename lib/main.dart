@@ -1,14 +1,20 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
+import 'core/google_config.dart';
 import 'core/theme.dart';
-import 'screens/login_screen.dart';
+import 'firebase_options.dart';
 import 'screens/home_screen.dart';
+import 'screens/login_screen.dart';
 import 'services/auth_service.dart';
 import 'services/job_repository.dart';
 
-void main() {
-  // TODO(firebase): WidgetsFlutterBinding.ensureInitialized();
-  //                 await Firebase.initializeApp(...);
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  await AuthService.instance.init(serverClientId: googleServerClientId);
   runApp(const IsiniGorApp());
 }
 
@@ -27,7 +33,8 @@ class IsiniGorApp extends StatelessWidget {
   }
 }
 
-/// Oturum durumuna göre giriş ekranı ya da uygulama iskeleti.
+/// Oturum durumuna göre giriş ekranı ya da ana ekran.
+/// Ayrıca oturum değiştikçe Firestore dinleyicisini o kullanıcıya bağlar.
 class _AuthGate extends StatelessWidget {
   const _AuthGate();
 
@@ -36,17 +43,22 @@ class _AuthGate extends StatelessWidget {
     return ListenableBuilder(
       listenable: AuthService.instance,
       builder: (context, _) {
-        if (!AuthService.instance.isSignedIn) {
-          return const LoginScreen();
-        }
+        final user = AuthService.instance.user;
+
+        // Build sırasında repo'yu değiştirmeyelim; kareden sonra bağla.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          JobRepository.instance.watchUser(user?.id);
+        });
+
+        if (user == null) return const LoginScreen();
         return const _NotificationWatcher(child: HomeScreen());
       },
     );
   }
 }
 
-/// Uygulama açıkken yeni bildirim düştüğünde üstte banner gösterir.
-/// FCM bağlanınca burası push mesajlarını dinleyecek.
+/// Uygulama açıkken yeni bildirim düştüğünde alt tarafta uyarı gösterir.
+/// FCM eklenince buraya push mesajları da bağlanacak.
 class _NotificationWatcher extends StatefulWidget {
   const _NotificationWatcher({required this.child});
 
