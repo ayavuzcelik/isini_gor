@@ -1,8 +1,7 @@
 import 'dart:async';
 
-import 'package:flutter_test/flutter_test.dart';
-
 import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 import 'package:isini_gor/main.dart';
 import 'package:isini_gor/models/job.dart';
@@ -40,28 +39,30 @@ void main() {
     expect(find.text('Google ile devam et'), findsOneWidget);
   });
 
-  test('fiyat girilince iş onay bekler duruma geçer ve bildirim düşer', () async {
-    final repo = JobRepository.instance;
+  test(
+    'fiyat girilince iş onay bekler duruma geçer ve bildirim düşer',
+    () async {
+      final repo = JobRepository.instance;
 
-    final job = await repo.createJob(
-      userId: 'demo-user-1',
-      category: JobCategory.plumbing,
-      title: 'Musluk tamiri',
-      description: 'Mutfak musluğu damlatıyor.',
-      address: 'Çankaya, Ankara',
-      preferredDate: DateTime.now().add(const Duration(days: 1)),
-    );
-    expect(job.status, JobStatus.pending);
+      final job = await repo.createJob(
+        userId: 'demo-user-1',
+        title: 'Musluk tamiri',
+        description: 'Mutfak musluğu damlatıyor.',
+        address: 'Çankaya, Ankara',
+        preferredDate: DateTime.now().add(const Duration(days: 1)),
+      );
+      expect(job.status, JobStatus.pending);
 
-    final before = repo.notificationsFor('demo-user-1').length;
-    await repo.setPrice(job.id, 1250, note: 'Montaj dahil.');
+      final before = repo.notificationsFor('demo-user-1').length;
+      await repo.setPrice(job.id, 1250, note: 'Montaj dahil.');
 
-    final priced = repo.byId(job.id)!;
-    expect(priced.status, JobStatus.priced);
-    expect(priced.price, 1250);
-    expect(priced.status.needsUserAction, isTrue);
-    expect(repo.notificationsFor('demo-user-1').length, before + 1);
-  });
+      final priced = repo.byId(job.id)!;
+      expect(priced.status, JobStatus.priced);
+      expect(priced.price, 1250);
+      expect(priced.status.needsUserAction, isTrue);
+      expect(repo.notificationsFor('demo-user-1').length, before + 1);
+    },
+  );
 
   test('kabul edilen iş accepted, reddedilen iş rejected olur', () async {
     final repo = JobRepository.instance;
@@ -69,7 +70,6 @@ void main() {
     Future<Job> pricedJob(String title) async {
       final job = await repo.createJob(
         userId: 'demo-user-1',
-        category: JobCategory.tire,
         title: title,
         description: 'Lastik değişimi gerekiyor.',
         address: 'Çankaya, Ankara',
@@ -94,7 +94,6 @@ void main() {
     final job = Job(
       id: 'job-1',
       userId: 'u1',
-      category: JobCategory.dogWalking,
       title: 'Köpek gezdirme',
       description: 'Akşam yürüyüşü',
       address: 'Ankara',
@@ -109,33 +108,16 @@ void main() {
     final restored = Job.fromMap('job-1', job.toMap());
 
     expect(restored.title, job.title);
-    expect(restored.category, job.category);
     expect(restored.status, job.status);
     expect(restored.price, job.price);
     expect(restored.timeline.length, 1);
-  });
-
-  testWidgets('giriş sonrası tüm sekmeler taşma hatası vermeden çizilir',
-      (tester) async {
-    await tester.pumpWidget(const IsiniGorApp());
-    await signIn(tester);
-
-    expect(find.text('Ne yapmamızı istersin?'), findsOneWidget);
-
-    for (final tab in ['İşlerim', 'Bildirimler', 'Profil']) {
-      await tester.tap(find.widgetWithText(NavigationDestination, tab));
-      await tester.pumpAndSettle();
-    }
-
-    await signOut(tester);
-    expect(find.text('Google ile devam et'), findsOneWidget);
   });
 
   testWidgets('iş detayında kabul et fiyat teklifini onaylar', (tester) async {
     await tester.pumpWidget(const IsiniGorApp());
     await signIn(tester);
 
-    // Ana sayfada onay bekleyen seed iş kartına gir.
+    // Ana sayfadaki onay bekleyen seed iş kartına gir.
     await tester.tap(find.text('Kışlık lastik değişimi').first);
     await tester.pumpAndSettle();
 

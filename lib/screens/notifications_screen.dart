@@ -113,8 +113,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       borderRadius: BorderRadius.circular(18),
                       border: Border.all(
                         color: n.read
-                            ? theme.colorScheme.outlineVariant
-                                .withValues(alpha: 0.6)
+                            ? theme.colorScheme.outlineVariant.withValues(
+                                alpha: 0.6,
+                              )
                             : color.withValues(alpha: 0.35),
                       ),
                     ),
@@ -144,12 +145,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                   Expanded(
                                     child: Text(
                                       n.title,
-                                      style:
-                                          theme.textTheme.titleSmall?.copyWith(
-                                        fontWeight: n.read
-                                            ? FontWeight.w600
-                                            : FontWeight.w800,
-                                      ),
+                                      style: theme.textTheme.titleSmall
+                                          ?.copyWith(
+                                            fontWeight: n.read
+                                                ? FontWeight.w600
+                                                : FontWeight.w800,
+                                          ),
                                     ),
                                   ),
                                   if (!n.read)
@@ -166,8 +167,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               const SizedBox(height: 4),
                               Text(
                                 n.body,
-                                style: theme.textTheme.bodySmall
-                                    ?.copyWith(height: 1.4),
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  height: 1.4,
+                                ),
                               ),
                               const SizedBox(height: 6),
                               Text(

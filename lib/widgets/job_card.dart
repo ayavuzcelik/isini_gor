@@ -41,12 +41,12 @@ class JobCard extends StatelessWidget {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: job.category.color.withValues(alpha: 0.12),
+                      color: theme.colorScheme.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Icon(
-                      job.category.icon,
-                      color: job.category.color,
+                      Icons.handyman_rounded,
+                      color: theme.colorScheme.primary,
                       size: 22,
                     ),
                   ),
@@ -57,41 +57,39 @@ class JobCard extends StatelessWidget {
                       children: [
                         Text(
                           job.title,
-                          maxLines: 1,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
+                            height: 1.25,
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          job.category.label,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
+                        const SizedBox(height: 3),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.event_rounded,
+                              size: 14,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              formatDayMonth(job.preferredDate),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  StatusChip(job.status, compact: true),
                 ],
               ),
               const SizedBox(height: 14),
               Row(
                 children: [
-                  Icon(
-                    Icons.event_rounded,
-                    size: 15,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(width: 5),
-                  Text(
-                    formatDayMonth(job.preferredDate),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
+                  StatusChip(job.status, compact: true),
                   const Spacer(),
                   if (job.price != null)
                     Text(

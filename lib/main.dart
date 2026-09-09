@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'core/theme.dart';
 import 'screens/login_screen.dart';
-import 'screens/shell_screen.dart';
+import 'screens/home_screen.dart';
 import 'services/auth_service.dart';
 import 'services/job_repository.dart';
 
@@ -39,7 +39,7 @@ class _AuthGate extends StatelessWidget {
         if (!AuthService.instance.isSignedIn) {
           return const LoginScreen();
         }
-        return const _NotificationWatcher(child: ShellScreen());
+        return const _NotificationWatcher(child: HomeScreen());
       },
     );
   }

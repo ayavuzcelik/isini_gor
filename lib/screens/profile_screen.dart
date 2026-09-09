@@ -155,7 +155,11 @@ class ProfileScreen extends StatelessWidget {
                       ],
                     ),
                   );
-                  if (ok == true) await auth.signOut();
+                  if (ok != true) return;
+                  // Profil ekranı ana sayfanın üstünde duruyor; çıkmadan
+                  // önce kapatmazsak giriş ekranı arkada kalır.
+                  if (context.mounted) Navigator.of(context).pop();
+                  await auth.signOut();
                 },
                 style: OutlinedButton.styleFrom(
                   foregroundColor: theme.colorScheme.error,
@@ -174,9 +178,9 @@ class ProfileScreen extends StatelessWidget {
   }
 
   void _soon(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Bu bölüm yakında.')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Bu bölüm yakında.')));
   }
 }
 

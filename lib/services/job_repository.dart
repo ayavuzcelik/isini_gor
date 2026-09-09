@@ -47,6 +47,7 @@ class JobRepository extends ChangeNotifier {
   /// `const` değil.
   static bool demoAutoPricing = true;
   static const Duration demoPricingDelay = Duration(seconds: 8);
+  static const double _demoPrice = 1450;
 
   // ---------------------------------------------------------------- okuma
 
@@ -74,10 +75,12 @@ class JobRepository extends ChangeNotifier {
   }
 
   List<AppNotification> notificationsFor(String userId) {
-    final jobIds = _jobs.where((j) => j.userId == userId).map((j) => j.id).toSet();
-    final list =
-        _notifications.where((n) => jobIds.contains(n.jobId)).toList()
-          ..sort((a, b) => b.at.compareTo(a.at));
+    final jobIds = _jobs
+        .where((j) => j.userId == userId)
+        .map((j) => j.id)
+        .toSet();
+    final list = _notifications.where((n) => jobIds.contains(n.jobId)).toList()
+      ..sort((a, b) => b.at.compareTo(a.at));
     return list;
   }
 
@@ -95,7 +98,6 @@ class JobRepository extends ChangeNotifier {
 
   Future<Job> createJob({
     required String userId,
-    required JobCategory category,
     required String title,
     required String description,
     required String address,
@@ -109,7 +111,6 @@ class JobRepository extends ChangeNotifier {
     final job = Job(
       id: 'job-${++_seq}-${now.millisecondsSinceEpoch}',
       userId: userId,
-      category: category,
       title: title,
       description: description,
       address: address,
@@ -161,8 +162,7 @@ class JobRepository extends ChangeNotifier {
     _pushNotification(
       jobId: jobId,
       title: 'İşiniz tanımlandı',
-      body:
-          '${job.title} için fiyat teklifi hazır. Onaylamak için dokun.',
+      body: '${job.title} için fiyat teklifi hazır. Onaylamak için dokun.',
     );
   }
 
@@ -257,23 +257,11 @@ class JobRepository extends ChangeNotifier {
       if (job == null || job.status != JobStatus.pending) return;
       setPrice(
         jobId,
-        _demoPriceFor(job.category),
+        _demoPrice,
         note: 'Ekibimiz talebini inceledi ve fiyatlandırdı.',
       );
     });
   }
-
-  double _demoPriceFor(JobCategory category) => switch (category) {
-        JobCategory.tire => 1450,
-        JobCategory.carService => 3200,
-        JobCategory.carWash => 750,
-        JobCategory.dogWalking => 300,
-        JobCategory.cleaning => 1800,
-        JobCategory.plumbing => 1250,
-        JobCategory.electric => 950,
-        JobCategory.moving => 4500,
-        JobCategory.other => 1000,
-      };
 
   @override
   void dispose() {
@@ -293,7 +281,6 @@ class JobRepository extends ChangeNotifier {
       Job(
         id: 'job-seed-1',
         userId: userId,
-        category: JobCategory.tire,
         title: 'Kışlık lastik değişimi',
         description:
             '4 adet kışlık lastiğim var, takılması ve balans ayarı gerekiyor.',
@@ -321,7 +308,6 @@ class JobRepository extends ChangeNotifier {
       Job(
         id: 'job-seed-2',
         userId: userId,
-        category: JobCategory.dogWalking,
         title: 'Köpeğimi akşam gezdirme',
         description:
             'Golden retriever, 3 yaşında. Hafta içi her akşam 19:00 civarı.',
@@ -354,7 +340,6 @@ class JobRepository extends ChangeNotifier {
       Job(
         id: 'job-seed-3',
         userId: userId,
-        category: JobCategory.carService,
         title: 'Periyodik bakım',
         description: '40.000 km bakımı, yağ ve filtre değişimi.',
         address: 'Kızılay, Ankara',

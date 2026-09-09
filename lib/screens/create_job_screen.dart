@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../core/formatters.dart';
-import '../core/ui_meta.dart';
-import '../models/job.dart';
 import '../services/auth_service.dart';
 import '../services/job_repository.dart';
 
 class CreateJobScreen extends StatefulWidget {
-  const CreateJobScreen({super.key, this.initialCategory});
-
-  final JobCategory? initialCategory;
+  const CreateJobScreen({super.key});
 
   @override
   State<CreateJobScreen> createState() => _CreateJobScreenState();
@@ -22,7 +18,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
   final _addressCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
 
-  late JobCategory _category = widget.initialCategory ?? JobCategory.tire;
   DateTime _date = DateTime.now().add(const Duration(days: 1));
   TimeOfDay _time = const TimeOfDay(hour: 10, minute: 0);
 
@@ -43,13 +38,8 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     super.dispose();
   }
 
-  DateTime get _preferredDateTime => DateTime(
-        _date.year,
-        _date.month,
-        _date.day,
-        _time.hour,
-        _time.minute,
-      );
+  DateTime get _preferredDateTime =>
+      DateTime(_date.year, _date.month, _date.day, _time.hour, _time.minute);
 
   Future<void> _pickDate() async {
     final now = DateTime.now();
@@ -82,7 +72,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     try {
       await JobRepository.instance.createJob(
         userId: user.id,
-        category: _category,
         title: _titleCtrl.text.trim(),
         description: _descCtrl.text.trim(),
         address: _addressCtrl.text.trim(),
@@ -102,9 +91,9 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _submitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Talep oluşturulamadı: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Talep oluşturulamadı: $e')));
     }
   }
 
@@ -119,48 +108,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
           children: [
-            const _Label('Kategori'),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: JobCategory.values.map((c) {
-                final selected = c == _category;
-                return ChoiceChip(
-                  selected: selected,
-                  onSelected: (_) => setState(() => _category = c),
-                  avatar: Icon(
-                    c.icon,
-                    size: 17,
-                    color: selected ? theme.colorScheme.onPrimary : c.color,
-                  ),
-                  label: Text(c.label),
-                  labelStyle: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: selected
-                        ? theme.colorScheme.onPrimary
-                        : theme.colorScheme.onSurface,
-                  ),
-                  selectedColor: theme.colorScheme.primary,
-                  backgroundColor: theme.colorScheme.surface,
-                  showCheckmark: false,
-                  side: BorderSide(
-                    color: selected
-                        ? theme.colorScheme.primary
-                        : theme.colorScheme.outlineVariant,
-                  ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _category.hint,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-
-            const SizedBox(height: 24),
             const _Label('İşin başlığı'),
             const SizedBox(height: 8),
             TextFormField(
@@ -201,9 +148,8 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                 hintText: 'Mahalle, sokak, no / ilçe, il',
                 prefixIcon: Icon(Icons.location_on_outlined),
               ),
-              validator: (v) => (v == null || v.trim().length < 5)
-                  ? 'Adres gerekli'
-                  : null,
+              validator: (v) =>
+                  (v == null || v.trim().length < 5) ? 'Adres gerekli' : null,
             ),
 
             const SizedBox(height: 20),
@@ -248,7 +194,9 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: theme.colorScheme.primaryContainer.withValues(alpha: 0.4),
+                color: theme.colorScheme.primaryContainer.withValues(
+                  alpha: 0.4,
+                ),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Row(
@@ -301,9 +249,9 @@ class _Label extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
+      style: Theme.of(
+        context,
+      ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
     );
   }
 }
@@ -329,8 +277,9 @@ class _PickerBox extends StatelessWidget {
       child: Ink(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
         decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHighest
-              .withValues(alpha: 0.4),
+          color: theme.colorScheme.surfaceContainerHighest.withValues(
+            alpha: 0.4,
+          ),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: theme.colorScheme.outlineVariant),
         ),

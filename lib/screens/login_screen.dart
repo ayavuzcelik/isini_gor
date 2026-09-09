@@ -21,9 +21,9 @@ class _LoginScreenState extends State<LoginScreen> {
       // Yönlendirmeyi main.dart'taki oturum dinleyicisi yapıyor.
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Giriş yapılamadı: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Giriş yapılamadı: $e')));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -39,10 +39,7 @@ class _LoginScreenState extends State<LoginScreen> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              seedColor,
-              const Color(0xFF1B2A6B),
-            ],
+            colors: [seedColor, const Color(0xFF1B2A6B)],
           ),
         ),
         child: SafeArea(
@@ -75,7 +72,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Lastik değişiminden köpek gezdirmeye kadar\nişini tarif et, gerisini biz halledelim.',
+                  'Lastik değişiminden köpek gezdirmeye kadar; '
+                  'işini tarif et, gerisini biz halledelim.',
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: Colors.white.withValues(alpha: 0.85),
                     height: 1.5,
@@ -102,8 +100,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: FilledButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: const Color(0xFF1F2430),
-                    disabledBackgroundColor:
-                        Colors.white.withValues(alpha: 0.6),
+                    disabledBackgroundColor: Colors.white.withValues(
+                      alpha: 0.6,
+                    ),
                   ),
                   icon: _busy
                       ? const SizedBox(
@@ -112,7 +111,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2.4),
                         )
                       : const _GoogleMark(),
-                  label: Text(_busy ? 'Giriş yapılıyor…' : 'Google ile devam et'),
+                  label: Text(
+                    _busy ? 'Giriş yapılıyor…' : 'Google ile devam et',
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Center(

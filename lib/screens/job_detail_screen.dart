@@ -44,9 +44,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     await _repo.rejectOffer(job.id);
     if (!mounted) return;
     setState(() => _busy = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Teklifi reddettin.')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Teklifi reddettin.')));
   }
 
   Future<void> _cancel(Job job) async {
@@ -142,10 +142,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Theme.of(context).colorScheme.error,
                     side: BorderSide(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .error
-                          .withValues(alpha: 0.5),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.error.withValues(alpha: 0.5),
                     ),
                   ),
                   icon: const Icon(Icons.close_rounded),
@@ -281,8 +280,9 @@ class _OfferCard extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest
-                      .withValues(alpha: 0.5),
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(
+                    alpha: 0.5,
+                  ),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -297,7 +297,9 @@ class _OfferCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         job.adminNote!,
-                        style: theme.textTheme.bodySmall?.copyWith(height: 1.45),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          height: 1.45,
+                        ),
                       ),
                     ),
                   ],
@@ -399,33 +401,22 @@ class _DetailsCard extends StatelessWidget {
                   width: 42,
                   height: 42,
                   decoration: BoxDecoration(
-                    color: job.category.color.withValues(alpha: 0.12),
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(13),
                   ),
                   child: Icon(
-                    job.category.icon,
-                    color: job.category.color,
+                    Icons.handyman_rounded,
+                    color: theme.colorScheme.primary,
                     size: 21,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        job.title,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      Text(
-                        job.category.label,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    job.title,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
               ],
@@ -537,10 +528,7 @@ class _TimelineCard extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             for (var i = 0; i < events.length; i++)
-              _TimelineRow(
-                event: events[i],
-                isLast: i == events.length - 1,
-              ),
+              _TimelineRow(event: events[i], isLast: i == events.length - 1),
           ],
         ),
       ),
@@ -651,9 +639,9 @@ class _DemoAdminButton extends StatelessWidget {
                 child: const Text('Vazgeç'),
               ),
               FilledButton(
-                onPressed: () => Navigator.of(context).pop(
-                  double.tryParse(controller.text.trim()),
-                ),
+                onPressed: () => Navigator.of(
+                  context,
+                ).pop(double.tryParse(controller.text.trim())),
                 style: FilledButton.styleFrom(minimumSize: const Size(100, 44)),
                 child: const Text('Gönder'),
               ),
