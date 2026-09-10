@@ -28,8 +28,9 @@ service cloud.firestore {
         && request.resource.data.status == 'pending'
         && request.resource.data.price == null;
 
-      // Kullanıcı yalnızca teklifi kabul/reddedebilir ya da bekleyen
-      // talebini iptal edebilir. Fiyata ve sahibine dokunamaz.
+      // Kullanıcı yalnızca teklifi kabul/reddedebilir, bekleyen talebini
+      // iptal edebilir ya da tamamlanmış işe bir kez puan verebilir.
+      // Fiyata ve sahibine hiçbir durumda dokunamaz.
       allow update: if owns(resource.data)
         && request.resource.data.userId == resource.data.userId
         && request.resource.data.price == resource.data.price
@@ -38,6 +39,16 @@ service cloud.firestore {
             && request.resource.data.status in ['accepted', 'rejected'])
           || (resource.data.status == 'pending'
             && request.resource.data.status == 'cancelled')
+          // Puanlama: durum değişmez, sadece rating/review/updatedAt yazılır
+          // ve daha önce puan verilmemiş olmalı.
+          || (resource.data.status == 'completed'
+            && request.resource.data.status == 'completed'
+            && resource.data.rating == null
+            && request.resource.data.rating is number
+            && request.resource.data.rating >= 1
+            && request.resource.data.rating <= 5
+            && request.resource.data.diff(resource.data)
+                 .affectedKeys().hasOnly(['rating', 'review', 'updatedAt']))
         );
 
       // İş kaydı silinmez; iptal edilir.
@@ -56,6 +67,13 @@ service cloud.firestore {
              .affectedKeys().hasOnly(['read']);
 
       allow delete: if false;
+    }
+
+    // Vitrin: tamamlanmış işlerin anonimleştirilmiş hâli.
+    // Giriş yapan herkes okur; yazma yalnızca admin tarafında (Admin SDK).
+    match /showcase/{itemId} {
+      allow read: if signedIn();
+      allow write: if false;
     }
   }
 }

@@ -91,7 +91,10 @@ class JobCard extends StatelessWidget {
                 children: [
                   StatusChip(job.status, compact: true),
                   const Spacer(),
-                  if (job.price != null)
+                  // Fiyat henüz sunulmadıysa (talep aşaması) gösterilmez;
+                  // aksi hâlde "Talep Alındı" ile birlikte tutar görünüp
+                  // teklif verilmiş gibi durur.
+                  if (job.price != null && job.status != JobStatus.pending)
                     Text(
                       formatPrice(job.price!),
                       style: theme.textTheme.titleMedium?.copyWith(

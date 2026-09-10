@@ -1,0 +1,13 @@
+{
+  "name": "isini-gor-firestore-tests",
+  "private": true,
+  "version": "1.0.0",
+  "description": "firestore.rules guvenlik kurali testleri",
+  "scripts": {
+    "test": "firebase emulators:exec --only firestore --project isini-gor-test \"node rules.test.js\""
+  },
+  "dependencies": {
+    "@firebase/rules-unit-testing": "^4.0.1",
+    "firebase": "^11.0.0"
+  }
+}

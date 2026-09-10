@@ -104,6 +104,8 @@ class Job {
     this.phone,
     this.price,
     this.adminNote,
+    this.rating,
+    this.review,
     this.timeline = const [],
   });
 
@@ -123,6 +125,16 @@ class Job {
   /// Admin'in fiyatla birlikte bıraktığı not.
   final String? adminNote;
 
+  /// İş tamamlandıktan sonra kullanıcının verdiği puan (1..5) ve yorumu.
+  /// Puan verilmeden ikisi de null.
+  final double? rating;
+  final String? review;
+
+  bool get isReviewed => rating != null;
+
+  /// Tamamlanmış ama henüz puanlanmamış iş — kullanıcıdan puan isteniyor.
+  bool get awaitsReview => status == JobStatus.completed && !isReviewed;
+
   final DateTime createdAt;
   final DateTime updatedAt;
   final List<JobEvent> timeline;
@@ -131,6 +143,8 @@ class Job {
     JobStatus? status,
     double? price,
     String? adminNote,
+    double? rating,
+    String? review,
     DateTime? updatedAt,
     List<JobEvent>? timeline,
   }) {
@@ -145,6 +159,8 @@ class Job {
       status: status ?? this.status,
       price: price ?? this.price,
       adminNote: adminNote ?? this.adminNote,
+      rating: rating ?? this.rating,
+      review: review ?? this.review,
       createdAt: createdAt,
       updatedAt: updatedAt ?? DateTime.now(),
       timeline: timeline ?? this.timeline,
@@ -162,6 +178,8 @@ class Job {
     'status': status.name,
     'price': price,
     'adminNote': adminNote,
+    'rating': rating,
+    'review': review,
     'createdAt': createdAt.toIso8601String(),
     'updatedAt': updatedAt.toIso8601String(),
     'timeline': timeline.map((e) => e.toMap()).toList(),
@@ -180,6 +198,8 @@ class Job {
     status: JobStatus.fromName(map['status'] as String?),
     price: (map['price'] as num?)?.toDouble(),
     adminNote: map['adminNote'] as String?,
+    rating: (map['rating'] as num?)?.toDouble(),
+    review: map['review'] as String?,
     createdAt:
         DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
     updatedAt:

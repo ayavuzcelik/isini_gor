@@ -43,3 +43,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Firestore kural testleri
+firestore_tests/node_modules/
+firestore_tests/package-lock.json
+firebase-debug.log
+firestore-debug.log
+ui-debug.log

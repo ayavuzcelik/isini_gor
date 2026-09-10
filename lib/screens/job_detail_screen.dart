@@ -4,6 +4,7 @@ import '../core/formatters.dart';
 import '../core/ui_meta.dart';
 import '../models/job.dart';
 import '../services/job_repository.dart';
+import '../widgets/rating_stars.dart';
 
 class JobDetailScreen extends StatefulWidget {
   const JobDetailScreen({super.key, required this.jobId});
@@ -62,6 +63,29 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     await _repo.cancelJob(job.id);
     if (!mounted) return;
     setState(() => _busy = false);
+  }
+
+  /// Puan verme kutusunu açar, sonucu Firestore'a yazar.
+  Future<void> _rate(Job job) async {
+    final result = await showModalBottomSheet<({int rating, String comment})>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => _ReviewSheet(jobTitle: job.title),
+    );
+    if (result == null) return;
+
+    setState(() => _busy = true);
+    await _repo.submitReview(
+      job.id,
+      rating: result.rating.toDouble(),
+      review: result.comment.trim().isEmpty ? null : result.comment.trim(),
+    );
+    if (!mounted) return;
+    setState(() => _busy = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Değerlendirmen için teşekkürler!')),
+    );
   }
 
   Future<bool?> _confirm({
@@ -130,6 +154,16 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 const SizedBox(height: 16),
               ],
 
+              // Tamamlanan iş: puan iste ya da verilen puanı göster.
+              if (job.status == JobStatus.completed) ...[
+                _ReviewCard(
+                  job: job,
+                  busy: _busy,
+                  onRate: () => _rate(job),
+                ),
+                const SizedBox(height: 16),
+              ],
+
               _DetailsCard(job: job),
               const SizedBox(height: 16),
 
@@ -150,8 +184,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   icon: const Icon(Icons.close_rounded),
                   label: const Text('Talebi İptal Et'),
                 ),
-                const SizedBox(height: 12),
-                _DemoAdminButton(job: job),
               ],
             ],
           ),
@@ -609,58 +641,191 @@ class _TimelineRow extends StatelessWidget {
   }
 }
 
-/// Admin paneli gelene kadar fiyatlandırmayı elle tetiklemek için.
-/// Panel yazıldığında bu widget silinecek.
-class _DemoAdminButton extends StatelessWidget {
-  const _DemoAdminButton({required this.job});
+
+/// Tamamlanan işte puan ister ya da verilmiş puanı gösterir.
+class _ReviewCard extends StatelessWidget {
+  const _ReviewCard({
+    required this.job,
+    required this.busy,
+    required this.onRate,
+  });
 
   final Job job;
+  final bool busy;
+  final VoidCallback onRate;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return TextButton.icon(
-      onPressed: () async {
-        final controller = TextEditingController(text: '1450');
-        final price = await showDialog<double>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Fiyat gir (demo admin)'),
-            content: TextField(
-              controller: controller,
-              keyboardType: TextInputType.number,
-              autofocus: true,
-              decoration: const InputDecoration(suffixText: '₺'),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Vazgeç'),
+    if (job.isReviewed) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Değerlendirmen',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
-              FilledButton(
-                onPressed: () => Navigator.of(
-                  context,
-                ).pop(double.tryParse(controller.text.trim())),
-                style: FilledButton.styleFrom(minimumSize: const Size(100, 44)),
-                child: const Text('Gönder'),
+              const SizedBox(height: 10),
+              RatingStars(rating: job.rating!, size: 22, showValue: true),
+              if (job.review != null && job.review!.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text(
+                  '\u201C${job.review!}\u201D',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    height: 1.45,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: ratingColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: ratingColor.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.star_rounded, color: ratingColor),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Bu iş nasıldı?',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
               ),
             ],
           ),
-        );
+          const SizedBox(height: 8),
+          Text(
+            'Puanın diğer kullanıcılara yol gösteriyor.',
+            style: theme.textTheme.bodySmall?.copyWith(height: 1.45),
+          ),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: busy ? null : onRate,
+            style: FilledButton.styleFrom(backgroundColor: ratingColor),
+            icon: const Icon(Icons.rate_review_outlined, size: 20),
+            label: const Text('Puan ver'),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-        if (price != null) {
-          await JobRepository.instance.setPrice(
-            job.id,
-            price,
-            note: 'Ekibimiz talebini inceledi ve fiyatlandırdı.',
-          );
-        }
-      },
-      icon: const Icon(Icons.admin_panel_settings_outlined, size: 18),
-      label: const Text('Demo: admin fiyat girsin'),
-      style: TextButton.styleFrom(
-        foregroundColor: theme.colorScheme.onSurfaceVariant,
+/// Yıldız + yorum alan alt sayfa.
+class _ReviewSheet extends StatefulWidget {
+  const _ReviewSheet({required this.jobTitle});
+
+  final String jobTitle;
+
+  @override
+  State<_ReviewSheet> createState() => _ReviewSheetState();
+}
+
+class _ReviewSheetState extends State<_ReviewSheet> {
+  final _commentCtrl = TextEditingController();
+  int _rating = 0;
+
+  static const _hints = {
+    1: 'Çok kötü',
+    2: 'Kötü',
+    3: 'İdare eder',
+    4: 'İyi',
+    5: 'Mükemmel',
+  };
+
+  @override
+  void dispose() {
+    _commentCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        0,
+        20,
+        MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            widget.jobTitle,
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Bu işi kaç yıldızla değerlendirirsin?',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 20),
+          RatingInput(
+            value: _rating,
+            onChanged: (v) => setState(() => _rating = v),
+          ),
+          const SizedBox(height: 8),
+          Center(
+            child: Text(
+              _hints[_rating] ?? 'Yıldızlara dokun',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: _rating == 0
+                    ? theme.colorScheme.onSurfaceVariant
+                    : ratingColor,
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          TextField(
+            controller: _commentCtrl,
+            maxLines: 3,
+            maxLength: 240,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(
+              hintText: 'Birkaç kelime yazmak ister misin? (isteğe bağlı)',
+            ),
+          ),
+          const SizedBox(height: 8),
+          FilledButton(
+            onPressed: _rating == 0
+                ? null
+                : () => Navigator.of(context).pop((
+                    rating: _rating,
+                    comment: _commentCtrl.text,
+                  )),
+            child: const Text('Gönder'),
+          ),
+        ],
       ),
     );
   }

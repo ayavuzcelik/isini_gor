@@ -228,6 +228,26 @@ class JobRepository extends ChangeNotifier {
     await _applyStatus(job, JobStatus.cancelled, note: 'Talebi iptal ettin.');
   }
 
+  /// Tamamlanmış işe puan ve yorum bırakır.
+  ///
+  /// Yalnızca işin sahibi ve yalnızca bir kez; kurallar da bunu zorunlu
+  /// kılıyor. Vitrine (showcase) taşıma işi admin tarafında yapılır, çünkü
+  /// orası tüm kullanıcılara açık.
+  Future<void> submitReview(
+    String jobId, {
+    required double rating,
+    String? review,
+  }) async {
+    final job = byId(jobId);
+    if (job == null || !job.awaitsReview) return;
+
+    await _jobsRef.doc(job.id).update({
+      'rating': rating,
+      'review': review,
+      'updatedAt': DateTime.now().toIso8601String(),
+    });
+  }
+
   // ------------------------------------------------------------- yardımcı
 
   Future<void> _applyStatus(

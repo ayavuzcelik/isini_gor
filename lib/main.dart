@@ -8,6 +8,7 @@ import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'services/auth_service.dart';
 import 'services/job_repository.dart';
+import 'services/showcase_repository.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -48,6 +49,11 @@ class _AuthGate extends StatelessWidget {
         // Build sırasında repo'yu değiştirmeyelim; kareden sonra bağla.
         WidgetsBinding.instance.addPostFrameCallback((_) {
           JobRepository.instance.watchUser(user?.id);
+          if (user != null) {
+            ShowcaseRepository.instance.start();
+          } else {
+            ShowcaseRepository.instance.stop();
+          }
         });
 
         if (user == null) return const LoginScreen();
