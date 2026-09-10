@@ -26,12 +26,15 @@ class HomeScreen extends StatelessWidget {
         final user = auth.user;
         final userId = user?.id ?? '';
         final awaiting = repo.awaitingActionFor(userId);
-        final open = repo.openJobsFor(userId);
+        // Onay bekleyenler yukarıda ayrı gösteriliyor; burada tekrar etmesin.
+        final ongoing = repo
+            .openJobsFor(userId)
+            .where((j) => !j.status.needsUserAction)
+            .toList();
         final past = repo.pastJobsFor(userId);
         final unread = repo.unreadCountFor(userId);
 
         return Scaffold(
-          backgroundColor: Colors.transparent,
           body: SafeArea(
             child: CustomScrollView(
               slivers: [
@@ -128,7 +131,7 @@ class HomeScreen extends StatelessWidget {
 
                 // Devam edenler
                 const _Header('Devam eden işlerin'),
-                if (open.isEmpty)
+                if (ongoing.isEmpty)
                   const SliverToBoxAdapter(
                     child: Padding(
                       padding: EdgeInsets.symmetric(horizontal: 20),
@@ -140,7 +143,7 @@ class HomeScreen extends StatelessWidget {
                     ),
                   )
                 else
-                  _JobSliver(jobs: open),
+                  _JobSliver(jobs: ongoing),
 
                 // Geçmiş
                 if (past.isNotEmpty) ...[

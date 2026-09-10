@@ -22,7 +22,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final userId = AuthService.instance.user?.id ?? '';
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text('Bildirimler'),
         actions: [

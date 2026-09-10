@@ -13,7 +13,6 @@ class ProfileScreen extends StatelessWidget {
     final repo = JobRepository.instance;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
       appBar: AppBar(title: const Text('Profil')),
       body: ListenableBuilder(
         listenable: Listenable.merge([auth, repo]),
